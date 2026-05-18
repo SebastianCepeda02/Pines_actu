@@ -1,0 +1,29 @@
+{
+  "name": "Consulta de Tokens — Energía",
+  "short_name": "Tokens",
+  "description": "Consulta de tokens para contadores de energía eléctrica",
+  "start_url": "./index.html?pwa=1",
+  "id": "./index.html",
+  "display": "standalone",
+  "background_color": "#060d1a",
+  "theme_color": "#060d1a",
+  "orientation": "portrait",
+  "lang": "es",
+  "categories": ["utilities", "business"],
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": []
+}
