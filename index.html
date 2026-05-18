@@ -877,7 +877,9 @@ function actualizarDBPill() {
 
 // ─── Búsqueda ────────────────────────────────────────
 async function buscar() {
-  const serial = document.getElementById('inp').value.trim();
+  const rawSerial = document.getElementById('inp').value.trim();
+  // normalizar: '14288846588.0' → '14288846588'
+  const serial = rawSerial.replace(/\.0+$/, '');
   if (!serial) return;
   ocultarResultados();
 
