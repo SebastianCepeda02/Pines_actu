@@ -562,6 +562,28 @@ body::after{
 
 @keyframes spin{ to{transform:rotate(360deg)} }
 
+/* ── Footer créditos ── */
+.footer-credit{
+  width:100%;
+  padding:14px 20px 18px;
+  text-align:center;
+  flex-shrink:0;
+  border-top:1px solid var(--muted2);
+  margin-top:auto;
+}
+.footer-credit p{
+  font-size:11px;
+  color:var(--muted);
+  line-height:1.6;
+  letter-spacing:0.2px;
+}
+.footer-credit a{
+  color:var(--accent);
+  text-decoration:none;
+  font-weight:700;
+}
+.footer-credit a:hover{ text-decoration:underline; }
+
 /* Responsive pequeño */
 @media(max-width:360px){
   .tok-val{ font-size:17px; letter-spacing:1px; }
@@ -596,6 +618,10 @@ body::after{
     <button class="btn-retry" id="btnRetry" onclick="iniciarSync()" style="display:none">
       Reintentar
     </button>
+    <footer class="footer-credit">
+      <p>Desarrollado por <strong>Sebastian Cepeda</strong><br>
+      <a href="mailto:sebascepeda2002@gmail.com">sebascepeda2002@gmail.com</a></p>
+    </footer>
   </div>
 
   <!-- ════ SCREEN: INSTALAR PWA ════ -->
@@ -603,7 +629,7 @@ body::after{
     <div class="install-bolt">⚡</div>
     <h1 class="install-title">Instala la<br><em>TokensApp</em></h1>
     <p class="install-sub">
-      Instala la app en tu celular para consultar tokens de contadores sin necesidad de internet.
+      Instala la app en tu celular para consultar tokens de contadores sin necesidad de internet. ¡¡Espera unos segundos para abrir sin instalar!!.
     </p>
 
     <!-- Spinner mientras esperamos beforeinstallprompt -->
@@ -653,6 +679,11 @@ body::after{
       <div class="ios-step">2. Selecciona <strong>"Agregar a pantalla de inicio"</strong></div>
       <div class="ios-step">3. Toca <strong>Agregar</strong></div>
     </div>
+
+    <footer class="footer-credit">
+      <p>Desarrollado por <strong>Sebastian Cepeda</strong><br>
+      <a href="mailto:sebascepeda2002@gmail.com">sebascepeda2002@gmail.com</a></p>
+    </footer>
   </div>
 
   <!-- ════ SCREEN: CONSULTA PRINCIPAL ════ -->
@@ -751,6 +782,11 @@ body::after{
         </div>
         <div class="hist-list" id="histList"></div>
       </div>
+
+      <footer class="footer-credit" style="border-top:none; padding-top:8px;">
+        <p>Desarrollado por <strong>Sebastian Cepeda</strong><br>
+        <a href="mailto:sebascepeda2002@gmail.com">sebascepeda2002@gmail.com</a></p>
+      </footer>
 
     </div><!-- /main-scroll -->
   </div><!-- /screenMain -->
