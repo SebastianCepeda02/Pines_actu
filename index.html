@@ -816,7 +816,7 @@ async function iniciarSync() {
     setProg(100, '¡Listo!', 'Base de datos lista para uso offline');
     localStorage.setItem('db_version', version);
     localStorage.setItem('db_fecha', new Date().toLocaleDateString('es-CO'));
-    totalRegistros = json.total || await contarDB();
+    totalRegistros = await contarDB();
 
     await new Promise(r => setTimeout(r, 600));
     irAConsulta();
