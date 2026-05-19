@@ -236,6 +236,28 @@ body::after{
 .step-text{ font-size:13px; color:var(--text); line-height:1.4; }
 .step-text span{ color:var(--muted); font-size:12px; display:block; }
 
+/* Guía Android */
+.android-guide { width:100%; max-width:320px; }
+.guide-steps { display:flex; flex-direction:column; gap:12px; }
+.guide-step {
+  background:var(--surface);
+  border:1px solid var(--muted2);
+  border-radius:var(--rs);
+  padding:14px 16px;
+  display:flex; align-items:center; gap:14px;
+  text-align:left;
+}
+.guide-num {
+  width:32px; height:32px; flex-shrink:0;
+  background:rgba(0,229,176,0.12);
+  border:1.5px solid rgba(0,229,176,0.3);
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:15px; font-weight:900; color:var(--accent);
+}
+.guide-txt { font-size:14px; color:var(--text); line-height:1.45; }
+.guide-txt strong { color:var(--accent); }
+
 /* Ya instalada (iOS Safari no soporta beforeinstallprompt) */
 .ios-guide{ display:none; }
 .ios-guide.visible{ display:flex; flex-direction:column; align-items:center; gap:10px; }
@@ -583,7 +605,8 @@ body::after{
     </p>
 
     <!-- Botón para Android (Chrome) -->
-    <button class="btn-install-main" id="btnInstalarPWA" onclick="instalarPWA()">
+    <!-- Botón si el navegador soporta beforeinstallprompt -->
+    <button class="btn-install-main" id="btnInstalarPWA" onclick="instalarPWA()" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="7 10 12 15 17 10"/>
@@ -591,9 +614,26 @@ body::after{
       </svg>
       Instalar App
     </button>
-    <p class="install-hint" id="installHint">Toca el botón y confirma la instalación</p>
 
-    <!-- Guía iOS (sin soporte beforeinstallprompt) -->
+    <!-- Guía Android (visible por defecto) -->
+    <div class="android-guide" id="androidGuide">
+      <div class="guide-steps">
+        <div class="guide-step">
+          <div class="guide-num">1</div>
+          <div class="guide-txt">Toca el menú <strong>⋮</strong> arriba a la derecha en Chrome</div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-num">2</div>
+          <div class="guide-txt">Selecciona <strong>"Agregar a la pantalla principal"</strong></div>
+        </div>
+        <div class="guide-step">
+          <div class="guide-num">3</div>
+          <div class="guide-txt">Toca <strong>Instalar</strong> para confirmar</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guía iOS -->
     <div class="ios-guide" id="iosGuide">
       <div class="ios-step">1. Toca el botón <strong>Compartir</strong> (□↑) en Safari</div>
       <div class="ios-step">2. Selecciona <strong>"Agregar a pantalla de inicio"</strong></div>
@@ -992,6 +1032,10 @@ let esPWA = window.matchMedia('(display-mode: standalone)').matches
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
+  // Si el navegador soporta el prompt automático, mostrar botón y ocultar guía
+  document.getElementById('btnInstalarPWA').style.display = 'flex';
+  const ag = document.getElementById('androidGuide');
+  if (ag) ag.style.display = 'none';
 });
 
 async function instalarPWA() {
@@ -1051,10 +1095,21 @@ async function main() {
     }
   } else {
     // Acceso desde navegador → mostrar pantalla de instalación
+    const iosGuide = document.getElementById('iosGuide');
+    const androidGuide = document.getElementById('androidGuide');
     if (esIOS) {
-      document.getElementById('btnInstalarPWA').style.display = 'none';
-      document.getElementById('installHint').style.display = 'none';
-      document.getElementById('iosGuide').classList.add('visible');
+      // iOS: mostrar guía Safari, ocultar Android
+      if (iosGuide) iosGuide.style.display = 'flex';
+      if (androidGuide) androidGuide.style.display = 'none';
+    } else {
+      // Android/PC: ocultar guía iOS, mostrar guía Android
+      if (iosGuide) iosGuide.style.display = 'none';
+      if (androidGuide) androidGuide.style.display = 'block';
+      // Si beforeinstallprompt ya disparó, mostrar botón en lugar de guía
+      if (deferredPrompt) {
+        document.getElementById('btnInstalarPWA').style.display = 'flex';
+        if (androidGuide) androidGuide.style.display = 'none';
+      }
     }
 
     // Si el prompt de instalación ya está listo, mostrar pantalla install
