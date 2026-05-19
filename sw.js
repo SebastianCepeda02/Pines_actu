@@ -24,8 +24,6 @@ self.addEventListener('activate', e => {
 
 // ── Fetch: cache-first para assets, network-first para datos ──
 self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-
   //ignorar peticiones HEAD, POST, etc.
   if (e.request.method !== 'GET') return;
 
