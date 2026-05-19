@@ -359,6 +359,7 @@ body::after{
   outline:none;
   transition:border-color 0.2s;
   -webkit-appearance:none;
+  appearance: none;
 }
 .inp::placeholder{
   font-family:system-ui,sans-serif;
@@ -560,6 +561,8 @@ body::after{
 }
 .toast.v{ opacity:1; transform:translateX(-50%) translateY(0); }
 
+@keyframes spin{ to{transform:rotate(360deg)} }
+
 /* Responsive pequeño */
 @media(max-width:360px){
   .tok-val{ font-size:17px; letter-spacing:1px; }
@@ -604,7 +607,12 @@ body::after{
       Instala la app en tu celular para consultar tokens de contadores sin necesidad de internet.
     </p>
 
-    <!-- Botón para Android (Chrome) -->
+    <!-- Spinner mientras esperamos beforeinstallprompt -->
+    <div id="installSpinner" style="display:none; flex-direction:column; align-items:center; gap:12px; margin-bottom:8px;">
+      <div style="width:36px;height:36px;border:3px solid var(--muted2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+      <span style="font-size:13px;color:var(--muted);">Preparando instalación…</span>
+    </div>
+
     <!-- Botón si el navegador soporta beforeinstallprompt -->
     <button class="btn-install-main" id="btnInstalarPWA" onclick="instalarPWA()" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -615,8 +623,8 @@ body::after{
       Instalar App
     </button>
 
-    <!-- Guía Android (visible por defecto) -->
-    <div class="android-guide" id="androidGuide">
+    <!-- Guía Android manual (oculta por defecto, aparece si no hay prompt) -->
+    <div class="android-guide" id="androidGuide" style="display:none">
       <div class="guide-steps">
         <div class="guide-step">
           <div class="guide-num">1</div>
@@ -632,6 +640,13 @@ body::after{
         </div>
       </div>
     </div>
+
+    <!-- Botón para saltarse la instalación si ya hay datos -->
+    <button id="btnSkipInstall" onclick="saltarInstalacion()"
+      style="display:none; margin-top:20px; background:none; border:none;
+             color:var(--muted); font-size:13px; cursor:pointer; text-decoration:underline;">
+      Abrir sin instalar →
+    </button>
 
     <!-- Guía iOS -->
     <div class="ios-guide" id="iosGuide">
@@ -1029,14 +1044,25 @@ let deferredPrompt = null;
 let esPWA = window.matchMedia('(display-mode: standalone)').matches
           || window.navigator.standalone === true;
 
+// Resolvers para esperar el evento de forma asíncrona
+let _resolveInstallPrompt = null;
+const installPromptPromise = new Promise(res => { _resolveInstallPrompt = res; });
+
 window.addEventListener('beforeinstallprompt', e => {
   e.preventDefault();
   deferredPrompt = e;
-  // Si el navegador soporta el prompt automático, mostrar botón y ocultar guía
-  document.getElementById('btnInstalarPWA').style.display = 'flex';
-  const ag = document.getElementById('androidGuide');
-  if (ag) ag.style.display = 'none';
+  _resolveInstallPrompt(e);         // desbloquea el await en main()
+  mostrarBotonInstalar();
 });
+
+function mostrarBotonInstalar() {
+  const btn = document.getElementById('btnInstalarPWA');
+  const ag  = document.getElementById('androidGuide');
+  const sp  = document.getElementById('installSpinner');
+  if (btn) btn.style.display = 'flex';
+  if (ag)  ag.style.display  = 'none';
+  if (sp)  sp.style.display  = 'none';
+}
 
 async function instalarPWA() {
   if (deferredPrompt) {
@@ -1090,46 +1116,54 @@ async function main() {
       totalRegistros = count;
       irAConsulta();
     } else {
-      // Instalada pero sin datos → sync automático
       await iniciarSync();
     }
-  } else {
-    // Acceso desde navegador → mostrar pantalla de instalación
-    const iosGuide = document.getElementById('iosGuide');
-    const androidGuide = document.getElementById('androidGuide');
-    if (esIOS) {
-      // iOS: mostrar guía Safari, ocultar Android
-      if (iosGuide) iosGuide.style.display = 'flex';
-      if (androidGuide) androidGuide.style.display = 'none';
-    } else {
-      // Android/PC: ocultar guía iOS, mostrar guía Android
-      if (iosGuide) iosGuide.style.display = 'none';
-      if (androidGuide) androidGuide.style.display = 'block';
-      // Si beforeinstallprompt ya disparó, mostrar botón en lugar de guía
-      if (deferredPrompt) {
-        document.getElementById('btnInstalarPWA').style.display = 'flex';
-        if (androidGuide) androidGuide.style.display = 'none';
-      }
-    }
-
-    // Si el prompt de instalación ya está listo, mostrar pantalla install
-    // Si no (ya instalada o navegador sin soporte), ir directo a consulta
-    if (count > 0 && !deferredPrompt) {
-      // Acceso desde navegador normal pero hay datos → ir a consulta
-      totalRegistros = count;
-      irAConsulta();
-    } else {
-      mostrar('screenInstall');
-      // Pero también iniciar sync en background para tener datos listos
-      if (navigator.onLine) {
-        iniciarSync().then(() => {
-          // Datos listos, esperando que el usuario instale
-        }).catch(() => {});
-      }
-    }
+    renderHistorial();
+    return;
   }
 
+  // ── Acceso desde navegador ──
+  mostrar('screenInstall');
+
+  if (esIOS) {
+    // iOS: guía Safari directamente, sin spinner
+    const iosGuide    = document.getElementById('iosGuide');
+    const androidGuide= document.getElementById('androidGuide');
+    const sp          = document.getElementById('installSpinner');
+    if (iosGuide)     iosGuide.style.display     = 'flex';
+    if (androidGuide) androidGuide.style.display = 'none';
+    if (sp)           sp.style.display           = 'none';
+  } else {
+    // Android/Desktop: esperar beforeinstallprompt hasta 4 s
+    const sp = document.getElementById('installSpinner');
+    if (sp) sp.style.display = 'flex';
+
+    const timeout = new Promise(res => setTimeout(res, 4000, 'timeout'));
+    const resultado = await Promise.race([installPromptPromise, timeout]);
+
+    if (resultado === 'timeout' || !deferredPrompt) {
+      // Chrome no ofreció el prompt → guía manual
+      if (sp) sp.style.display = 'none';
+      const ag = document.getElementById('androidGuide');
+      if (ag) ag.style.display = 'block';
+    }
+    // Si llegó el evento, mostrarBotonInstalar() ya se ejecutó en el listener
+  }
+
+  // Botón "Abrir sin instalar" si ya hay datos
+  if (count > 0) {
+    const btnSkip = document.getElementById('btnSkipInstall');
+    if (btnSkip) btnSkip.style.display = 'block';
+  }
+
+  // Sync en background para tener datos listos cuando instalen
+  if (navigator.onLine) iniciarSync().catch(() => {});
+
   renderHistorial();
+}
+
+function saltarInstalacion() {
+  irAConsulta();
 }
 
 main();
