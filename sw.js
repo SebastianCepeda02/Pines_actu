@@ -26,6 +26,11 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
+  //ignorar peticiones HEAD, POST, etc.
+  if (e.request.method !== 'GET') return;
+
+  const url = new URL(e.request.url);
+
   // datos.json → network-first (para detectar actualizaciones)
   if (url.pathname.endsWith('datos.json')) {
     e.respondWith(
