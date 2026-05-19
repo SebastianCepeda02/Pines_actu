@@ -1,4 +1,4 @@
-const APP_VER = 'v1';
+const APP_VER = 'v2';
 const CACHE = 'tokensapp-' + APP_VER;
 const ASSETS = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
