@@ -359,7 +359,6 @@ body::after{
   outline:none;
   transition:border-color 0.2s;
   -webkit-appearance:none;
-  appearance: none;
 }
 .inp::placeholder{
   font-family:system-ui,sans-serif;
@@ -857,48 +856,57 @@ function setProg(pct, txt, step) {
 let totalRegistros = 0;
 let ultimaVersion = localStorage.getItem('db_version') || '0';
 
-async function iniciarSync() {
-  document.getElementById('syncError').classList.remove('visible');
-  document.getElementById('btnRetry').style.display = 'none';
-  localStorage.removeItem('db_fecha');
-  mostrar('screenSync');
-  setProg(0, 'Conectando...', '');
+// background=true → silencioso, no cambia de pantalla
+async function iniciarSync(background = false) {
+  if (!background) {
+    document.getElementById('syncError').classList.remove('visible');
+    document.getElementById('btnRetry').style.display = 'none';
+    localStorage.removeItem('db_fecha');
+    mostrar('screenSync');
+    setProg(0, 'Conectando...', '');
+  }
 
   try {
-    setProg(5, 'Descargando datos...', 'Esto puede tardar unos segundos');
+    if (!background) setProg(5, 'Descargando datos...', 'Esto puede tardar unos segundos');
 
     const resp = await fetch(DATOS_URL + '?t=' + Date.now(), { cache: 'no-store' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
 
-    setProg(20, 'Procesando datos...', 'Preparando la base de datos');
+    if (!background) setProg(20, 'Procesando datos...', 'Preparando la base de datos');
 
-    // Leer JSON con progreso simulado
     const json = await resp.json();
     const version = String(json.v || '1') + '_' + String(json.total || '0');
 
-    setProg(35, 'Guardando en dispositivo...', `${(json.total || 0).toLocaleString('es')} registros`);
+    if (!background) setProg(35, 'Guardando en dispositivo...', `${(json.total || 0).toLocaleString('es')} registros`);
 
     await poblarDB(json.d, (actual, total) => {
-      const pct = 35 + (actual / total) * 60;
-      setProg(pct, 'Guardando...', `${actual.toLocaleString('es')} / ${total.toLocaleString('es')}`);
+      if (!background) {
+        const pct = 35 + (actual / total) * 60;
+        setProg(pct, 'Guardando...', `${actual.toLocaleString('es')} / ${total.toLocaleString('es')}`);
+      }
     });
 
-    setProg(100, '¡Listo!', 'Base de datos lista para uso offline');
     localStorage.setItem('db_version', version);
     localStorage.setItem('db_fecha', new Date().toLocaleDateString('es-CO'));
     totalRegistros = await contarDB();
 
-    await new Promise(r => setTimeout(r, 600));
-    irAConsulta();
+    if (!background) {
+      setProg(100, '¡Listo!', 'Base de datos lista para uso offline');
+      await new Promise(r => setTimeout(r, 600));
+      irAConsulta();
+    } else {
+      // Sync silencioso terminó: revelar botón "Abrir sin instalar"
+      const btnSkip = document.getElementById('btnSkipInstall');
+      if (btnSkip) btnSkip.style.display = 'block';
+    }
 
   } catch (err) {
-    // Sin internet — verificar si ya hay datos locales
+    if (background) return; // silencioso
     const count = await contarDB().catch(() => 0);
     if (count > 0) {
       totalRegistros = count;
       irAConsulta();
     } else {
-      // Sin datos y sin internet — mostrar error
       document.getElementById('syncError').classList.add('visible');
       document.getElementById('btnRetry').style.display = 'block';
       setProg(0, 'Sin conexión', '');
@@ -921,7 +929,7 @@ async function verificarActualizacion() {
 
 async function actualizarDatos() {
   document.getElementById('updateBanner').classList.remove('v');
-  await iniciarSync();
+  await iniciarSync(false);
 }
 
 // ─── Ir a consulta ───────────────────────────────────
@@ -1156,8 +1164,8 @@ async function main() {
     if (btnSkip) btnSkip.style.display = 'block';
   }
 
-  // Sync en background para tener datos listos cuando instalen
-  if (navigator.onLine) iniciarSync().catch(() => {});
+  // Sync en background — silencioso, no cambia de pantalla
+  if (navigator.onLine) iniciarSync(true).catch(() => {});
 
   renderHistorial();
 }
