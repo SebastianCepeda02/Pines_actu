@@ -24,6 +24,7 @@ self.addEventListener('activate', e => {
 
 // ── Fetch: cache-first para assets, network-first para datos ──
 self.addEventListener('fetch', e => {
+  if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
   // datos.json → network-first (para detectar actualizaciones)
