@@ -524,7 +524,7 @@ body::after{
 }
 .hist-item-hora{ font-size:11px; color:var(--muted); flex-shrink:0; }
 
-/* Banner actualización */
+/* Banners actualización */
 .update-banner{
   display:none;
   background:rgba(0,229,176,0.08);
@@ -543,6 +543,25 @@ body::after{
   padding:8px 14px; font-size:12px; font-weight:800;
   cursor:pointer; flex-shrink:0;
 }
+
+.manual-banner{
+  display:none;
+  background:rgba(74,112,144,0.08);
+  border:1px solid var(--muted2);
+  border-radius:var(--rs);
+  padding:12px 14px;
+  font-size:13px;
+  align-items:center; gap:10px;
+}
+.manual-banner.v{ display:flex; }
+.btn-manual{
+  background:var(--surface2); color:var(--text);
+  border:1px solid var(--muted); border-radius:8px;
+  padding:8px 14px; font-size:12px; font-weight:800;
+  cursor:pointer; flex-shrink:0;
+  transition:background 0.2s;
+}
+.btn-manual:active{ background:var(--muted2); }
 
 /* Toast */
 .toast{
@@ -705,6 +724,15 @@ body::after{
           <span>Actualiza para tener la base de datos más reciente</span>
         </div>
         <button class="btn-update" onclick="actualizarDatos()">Actualizar</button>
+      </div>
+
+      <div class="manual-banner" id="manualBanner">
+        <span style="font-size:20px">⚙️</span>
+        <div class="update-txt">
+          Sincronización manual
+          <span>Fuerza la descarga de la base de datos en cualquier momento</span>
+        </div>
+        <button class="btn-manual" onclick="actualizarDatos()">Sincronizar</button>
       </div>
 
       <div class="db-pill" id="dbPill">
@@ -928,7 +956,7 @@ async function iniciarSync(background = false) {
     await poblarDB(json.d, (actual, total) => {
       if (!background) {
         const pct = 35 + (actual / total) * 60;
-        setProg(pct, 'Guardando...', `${actual.toLocaleString('es')} / ${total.toLocaleString('es')}`); // Se aprovecha el throttle aquí
+        setProg(pct, 'Guardando...', `${actual.toLocaleString('es')} / ${total.toLocaleString('es')}`);
       }
     });
 
@@ -969,12 +997,14 @@ async function verificarActualizacion() {
     if (serverLen && serverLen !== guardado) {
       localStorage.setItem('db_content_length', serverLen);
       document.getElementById('updateBanner').classList.add('v');
+      document.getElementById('manualBanner').classList.remove('v');
     }
   } catch {}
 }
 
 async function actualizarDatos() {
   document.getElementById('updateBanner').classList.remove('v');
+  document.getElementById('manualBanner').classList.remove('v');
   await iniciarSync(false);
 }
 
@@ -984,6 +1014,7 @@ function irAConsulta() {
   actualizarEstado();
   actualizarDBPill();
   document.getElementById('inp').focus();
+  document.getElementById('manualBanner').classList.add('v');
   verificarActualizacion();
 }
 
