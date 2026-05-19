@@ -791,6 +791,7 @@ let ultimaVersion = localStorage.getItem('db_version') || '0';
 async function iniciarSync() {
   document.getElementById('syncError').classList.remove('visible');
   document.getElementById('btnRetry').style.display = 'none';
+  localStorage.removeItem('db_fecha');
   mostrar('screenSync');
   setProg(0, 'Conectando...', '');
 
