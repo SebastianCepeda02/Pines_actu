@@ -594,7 +594,6 @@ body::after{
 <body>
 <div id="app">
 
-  <!-- ════ SCREEN: SINCRONIZANDO ════ -->
   <div class="screen" id="screenSync">
     <div class="sync-logo">
       <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -624,7 +623,6 @@ body::after{
     </footer>
   </div>
 
-  <!-- ════ SCREEN: INSTALAR PWA ════ -->
   <div class="screen" id="screenInstall">
     <div class="install-bolt">⚡</div>
     <h1 class="install-title">Instala la<br><em>TokensApp</em></h1>
@@ -632,13 +630,11 @@ body::after{
       Instala la app en tu celular para consultar tokens de contadores sin necesidad de internet. ¡¡Espera unos segundos para abrir sin instalar!!.
     </p>
 
-    <!-- Spinner mientras esperamos beforeinstallprompt -->
     <div id="installSpinner" style="display:none; flex-direction:column; align-items:center; gap:12px; margin-bottom:8px;">
       <div style="width:36px;height:36px;border:3px solid var(--muted2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div>
       <span style="font-size:13px;color:var(--muted);">Preparando instalación…</span>
     </div>
 
-    <!-- Botón si el navegador soporta beforeinstallprompt -->
     <button class="btn-install-main" id="btnInstalarPWA" onclick="instalarPWA()" style="display:none">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -648,7 +644,6 @@ body::after{
       Instalar App
     </button>
 
-    <!-- Guía Android manual (oculta por defecto, aparece si no hay prompt) -->
     <div class="android-guide" id="androidGuide" style="display:none">
       <div class="guide-steps">
         <div class="guide-step">
@@ -666,14 +661,12 @@ body::after{
       </div>
     </div>
 
-    <!-- Botón para saltarse la instalación si ya hay datos -->
     <button id="btnSkipInstall" onclick="saltarInstalacion()"
       style="display:none; margin-top:20px; background:none; border:none;
              color:var(--muted); font-size:13px; cursor:pointer; text-decoration:underline;">
       Abrir sin instalar →
     </button>
 
-    <!-- Guía iOS -->
     <div class="ios-guide" id="iosGuide">
       <div class="ios-step">1. Toca el botón <strong>Compartir</strong> (□↑) en Safari</div>
       <div class="ios-step">2. Selecciona <strong>"Agregar a pantalla de inicio"</strong></div>
@@ -686,7 +679,6 @@ body::after{
     </footer>
   </div>
 
-  <!-- ════ SCREEN: CONSULTA PRINCIPAL ════ -->
   <div class="screen" id="screenMain">
 
     <div class="hdr">
@@ -788,12 +780,7 @@ body::after{
         <a href="mailto:sebascepeda2002@gmail.com">sebascepeda2002@gmail.com</a></p>
       </footer>
 
-    </div><!-- /main-scroll -->
-  </div><!-- /screenMain -->
-
-</div><!-- /app -->
-
-<div class="toast" id="toast"></div>
+    </div></div></div><div class="toast" id="toast"></div>
 
 <script>
 // ═══════════════════════════════════════════════════
@@ -881,11 +868,33 @@ function mostrar(id) {
 }
 
 // ─── Progreso sync ───────────────────────────────────
-function setProg(pct, txt, step) {
-  document.getElementById('progFill').style.width = pct + '%';
-  document.getElementById('progPct').textContent = Math.round(pct) + '%';
-  if (txt) document.getElementById('progTxt').textContent = txt;
-  if (step !== undefined) document.getElementById('progStep').textContent = step;
+let maxProgPct = 0;
+let lastProgTime = 0;
+
+function resetProg() {
+  maxProgPct = 0;
+  lastProgTime = 0;
+}
+
+function setProg(pct, txt, step, force = false) {
+  // 1. Evitar que el porcentaje retroceda
+  if (pct > maxProgPct) maxProgPct = pct;
+  const displayPct = maxProgPct;
+
+  // 2. Throttling: actualizar DOM máximo cada 150ms, a menos que sea forzado o llegue a 100%
+  const now = Date.now();
+  if (!force && displayPct < 100 && (now - lastProgTime < 150)) {
+    return;
+  }
+  lastProgTime = now;
+
+  // Usar requestAnimationFrame para un pintado fluido
+  requestAnimationFrame(() => {
+    document.getElementById('progFill').style.width = displayPct + '%';
+    document.getElementById('progPct').textContent = Math.round(displayPct) + '%';
+    if (txt) document.getElementById('progTxt').textContent = txt;
+    if (step !== undefined) document.getElementById('progStep').textContent = step;
+  });
 }
 
 // ─── Sincronización ──────────────────────────────────
@@ -895,30 +904,31 @@ let ultimaVersion = localStorage.getItem('db_version') || '0';
 // background=true → silencioso, no cambia de pantalla
 async function iniciarSync(background = false) {
   if (!background) {
+    resetProg();
     document.getElementById('syncError').classList.remove('visible');
     document.getElementById('btnRetry').style.display = 'none';
     localStorage.removeItem('db_fecha');
     mostrar('screenSync');
-    setProg(0, 'Conectando...', '');
+    setProg(0, 'Conectando...', '', true);
   }
 
   try {
-    if (!background) setProg(5, 'Descargando datos...', 'Esto puede tardar unos segundos');
+    if (!background) setProg(5, 'Descargando datos...', 'Esto puede tardar unos segundos', true);
 
     const resp = await fetch(DATOS_URL + '?t=' + Date.now(), { cache: 'no-store' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
 
-    if (!background) setProg(20, 'Procesando datos...', 'Preparando la base de datos');
+    if (!background) setProg(20, 'Procesando datos...', 'Preparando la base de datos', true);
 
     const json = await resp.json();
     const version = String(json.v || '1') + '_' + String(json.total || '0');
 
-    if (!background) setProg(35, 'Guardando en dispositivo...', `${(json.total || 0).toLocaleString('es')} registros`);
+    if (!background) setProg(35, 'Guardando en dispositivo...', `${(json.total || 0).toLocaleString('es')} registros`, true);
 
     await poblarDB(json.d, (actual, total) => {
       if (!background) {
         const pct = 35 + (actual / total) * 60;
-        setProg(pct, 'Guardando...', `${actual.toLocaleString('es')} / ${total.toLocaleString('es')}`);
+        setProg(pct, 'Guardando...', `${actual.toLocaleString('es')} / ${total.toLocaleString('es')}`); // Se aprovecha el throttle aquí
       }
     });
 
@@ -927,7 +937,7 @@ async function iniciarSync(background = false) {
     totalRegistros = await contarDB();
 
     if (!background) {
-      setProg(100, '¡Listo!', 'Base de datos lista para uso offline');
+      setProg(100, '¡Listo!', 'Base de datos lista para uso offline', true);
       await new Promise(r => setTimeout(r, 600));
       irAConsulta();
     } else {
@@ -945,7 +955,7 @@ async function iniciarSync(background = false) {
     } else {
       document.getElementById('syncError').classList.add('visible');
       document.getElementById('btnRetry').style.display = 'block';
-      setProg(0, 'Sin conexión', '');
+      setProg(0, 'Sin conexión', '', true);
     }
   }
 }
@@ -1000,8 +1010,8 @@ async function buscar() {
   const reg = await buscarDB(serial);
   if (reg) {
     document.getElementById('rSerial').textContent = reg.s;
-    document.getElementById('rTok1').textContent = reg.t[0] || '—';
-    document.getElementById('rTok2').textContent = reg.t[1] || '—';
+    document.getElementById('rTok1').textContent = reg.t || '—';
+    document.getElementById('rTok2').textContent = reg.t || '—';
     document.getElementById('result').classList.add('v');
     agregarHistorial(serial);
   } else {
