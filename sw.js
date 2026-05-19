@@ -1,6 +1,6 @@
-const APP_VER = 'v2';
+const APP_VER = 'v1';
 const CACHE = 'tokensapp-' + APP_VER;
-const ASSETS = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png'];
+const ASSETS = ['./index.html', './manifest.json', './icon-192.png', './icon-512.png', './screenshot-mobile.png', './screenshot-wide.png'];
 
 // ── Instalación: cachear app shell ──
 self.addEventListener('install', e => {
