@@ -743,30 +743,44 @@ function buscarDB(serial) {
 }
 
 function poblarDB(datos, onProg) {
-  return new Promise((res, rej) => {
+return new Promise((res, rej) => {
     const seriales = Object.keys(datos);
     const total = seriales.length;
-    const tx = db.transaction(STORE, 'readwrite');
-    const store = tx.objectStore(STORE);
     let i = 0;
 
-    // Limpiar primero
-    store.clear().onsuccess = () => {
+    // abrimos una transacción solo para limpiar la base de datos primero
+    const txLimpiar = db.transaction(STORE, 'readwrite');
+    txLimpiar.objectStore(STORE).clear().onsuccess = () => {
+      
       function lote() {
+        if (i >= total) {
+          res(total);
+          return;
+        }
+
+        // abrimos una NUEVA transacción para cada lote de 2000
+        const tx = db.transaction(STORE, 'readwrite');
+        const store = tx.objectStore(STORE);
         const fin = Math.min(i + 2000, total);
+        
         while (i < fin) {
           const s = seriales[i];
           store.put({ s, t: datos[s] });
           i++;
         }
-        onProg(i, total);
-        if (i < total) setTimeout(lote, 0);
-      }
-      lote();
-    };
 
-    tx.oncomplete = () => res(total);
-    tx.onerror = e => rej(e.target.error);
+        // cuando este lote termine de guardarse exitosamente en el disco
+        tx.oncomplete = () => {
+          onProg(i, total);
+          // ahora sí podemos pausar tranquilos, el siguiente ciclo abrirá otra transacción
+          setTimeout(lote, 0); 
+        };
+        
+        tx.onerror = e => rej(e.target.error);
+      }
+      
+      lote(); // iniciamos el primer lote
+    };
   });
 }
 
