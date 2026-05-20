@@ -1040,8 +1040,8 @@ async function buscar() {
   const reg = await buscarDB(serial);
   if (reg) {
     document.getElementById('rSerial').textContent = reg.s;
-    document.getElementById('rTok1').textContent = reg.t || '—';
-    document.getElementById('rTok2').textContent = reg.t || '—';
+    document.getElementById('rTok1').textContent = (reg.t && reg.t[0]) ? reg.t[0] : '—';
+    document.getElementById('rTok2').textContent = (reg.t && reg.t[1]) ? reg.t[1] : '—';
     document.getElementById('result').classList.add('v');
     agregarHistorial(serial);
   } else {
@@ -1247,7 +1247,17 @@ async function main() {
 }
 
 function saltarInstalacion() {
-  irAConsulta();
+  // Si la DB ya tiene datos (sync background terminó) → ir directo a consulta
+  // Si no → ir a screenSync para que el usuario vea el progreso de descarga
+  contarDB().then(count => {
+    if (count > 0) {
+      totalRegistros = count;
+      irAConsulta();
+    } else {
+      // Redirigir a screenSync y lanzar sync en foreground
+      iniciarSync(false);
+    }
+  }).catch(() => iniciarSync(false));
 }
 
 main();
